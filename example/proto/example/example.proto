@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package authorize;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "authorize/authorize.proto";
+
+message Request {
+  string str_value = 1;
+  int64 int_value = 2;
+  bool bool_value = 3;
+  double double_value = 4;
+  float float_value = 5;
+  repeated string str_array = 6;
+  repeated int64 int_array = 7;
+  repeated bool bool_array = 8;
+  repeated double double_array = 9;
+  google.protobuf.Struct struct_value = 10;
+}
+
+service ExampleService {
+  rpc ExampleMethod1(Request) returns (google.protobuf.Empty){
+    option (authorize.rules) = {
+      // Allow if any of the rules are true
+      rules: [
+        {
+          expression: "request.StrValue == 'hello'",
+        },
+        {
+          expression: "request.IntValue == 1",
+        },
+        {
+          expression: "request.BoolValue == true",
+        },
+        {
+          expression: "request.DoubleValue == 1.0",
+        },
+        {
+          expression: "request.FloatValue == 1.0",
+        },
+        {
+          expression: "request.StrArray == ['hello', 'world']",
+        },
+        {
+          expression: "request.IntArray == [1, 2]",
+        },
+        {
+          expression: "request.BoolArray == [true, false]",
+        },
+        {
+          expression: "request.DoubleArray == [1.0, 2.0]",
+        },
+        {
+          expression: "request.StructValue == {key: 'value'}",
+        }
+      ]
+    };
+  }
+}
