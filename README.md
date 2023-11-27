@@ -5,6 +5,13 @@ It seamlessly integrates authorization rules directly within your proto files �
 Perfect for developers 👨‍💻👩‍💻 looking to streamline their security workflows in gRPC applications. 
 In this README, you'll find easy installation instructions 📥, examples 💡, and all you need to harness the power of expression-based rules for robust and efficient request handling 💼.
 
+## Features
+- [x] Javascript expression-based rules
+- [x] Unary and Stream interceptors
+- [x] Protoc plugin for code generation
+- [x] Go library for authorizer creation along with interceptors
+- [x] Injection of `request`, `metadata` and `user` variables into rules
+- [x] Automatic user extraction from metadata with `userExtractor` option
 
 ## Installation
 
