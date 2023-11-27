@@ -9,6 +9,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// ExpressionVar is a global variable injected into a javascript authorization expression
+type ExpressionVar string
+
+const (
+	// ExpressionVarRequest is the request object
+	ExpressionVarRequest ExpressionVar = "request"
+	// ExpressionVarMetadata is the metadata object
+	ExpressionVarMetadata ExpressionVar = "metadata"
+	// ExpressionVarUser is the user object
+	ExpressionVarUser ExpressionVar = "user"
+	// ExpressionVarIsStream is true if the grpc handler is a streaming handler
+	ExpressionVarIsStream ExpressionVar = "is_stream"
+)
+
 // RuleExecutionParams is the set of parameters passed to the Authorizer.ExecuteRule function
 type RuleExecutionParams struct {
 	// User is the user extracted from the context using the Authorizer.ExtractUser function

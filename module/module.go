@@ -3,6 +3,7 @@ package module
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	pgs "github.com/lyft/protoc-gen-star"
@@ -16,6 +17,7 @@ import (
 type module struct {
 	*pgs.ModuleBase
 	pgsgo.Context
+	authorizer string
 }
 
 func New() pgs.Module {
@@ -23,12 +25,18 @@ func New() pgs.Module {
 }
 
 func (m *module) Name() string {
-	return "authorizer"
+	return "authorize"
 }
 
 func (m *module) InitContext(c pgs.BuildContext) {
 	m.ModuleBase.InitContext(c)
 	m.Context = pgsgo.InitContext(c.Parameters())
+	params := c.Parameters()
+	m.authorizer = params.Str("authorizer")
+	if m.authorizer == "" {
+		m.authorizer = "cel"
+	}
+	m.authorizer = strings.ToLower(m.authorizer)
 }
 
 func (m *module) Execute(targets map[string]pgs.File, packages map[string]pgs.Package) []pgs.Artifact {
@@ -62,11 +70,21 @@ func (m *module) generate(f pgs.File) {
 		return
 	}
 	name := f.InputPath().SetExt(".pb.authorizer.go").String()
-	t, err := template.New("authorizer").Parse(tmpl)
-	if err != nil {
-		m.AddError(err.Error())
-		return
+	var (
+		t   *template.Template
+		err error
+	)
+	switch m.authorizer {
+	case "javascript":
+		t, err = template.New("authorizer").Parse(javascriptTmpl)
+		if err != nil {
+			m.AddError(err.Error())
+			return
+		}
+	case "cel":
+		t, err = template.New("authorizer").Parse(celTmpl)
 	}
+
 	buffer := &bytes.Buffer{}
 	if err := t.Execute(buffer, templateData{
 		Package: m.Context.PackageName(f).String(),
@@ -83,17 +101,47 @@ type templateData struct {
 	Rules   map[string]*authorize.RuleSet
 }
 
-var tmpl = `
+var javascriptTmpl = `
 package {{ .Package }}
 
 import (
-	"github.com/autom8ter/protoc-gen-authorize/authorizer"
+	"github.com/autom8ter/protoc-gen-authorize/authorizer/javascript"
 	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
+// NewAuthorizer returns a new javascript authorizer. The rules map is a map of method names to RuleSets. The RuleSets are used to
+// authorize the method. The RuleSets are evaluated in order and the first rule that evaluates to true will authorize
+// the request. The mapping can be generated with the protoc-gen-authorize plugin.
+func NewAuthorizer() (*javascript.JavascriptAuthorizer, error) {
+	return javascript.NewJavascriptAuthorizer(map[string]*authorize.RuleSet{
+	{{- range $key, $value := .Rules }}
+	{{$key}}: {
+		Rules: []*authorize.Rule{
+		{{- range $value.Rules }}
+			{
+				Expression: "{{ .Expression }}",
+			},
+		{{- end }}
+		},
+	},
+	{{- end }}
+})
+}
+`
 
-func NewJavascriptAuthorizer() (*authorizer.JavascriptAuthorizer, error) {
-	return authorizer.NewJavascriptAuthorizer(map[string]*authorize.RuleSet{
+var celTmpl = `
+package {{ .Package }}
+
+import (
+	"github.com/autom8ter/protoc-gen-authorize/authorizer/cel"
+	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
+)
+
+// NewAuthorizer returns a new javascript authorizer. The rules map is a map of method names to RuleSets. The RuleSets are used to
+// authorize the method. The RuleSets are evaluated in order and the first rule that evaluates to true will authorize
+// the request. The mapping can be generated with the protoc-gen-authorize plugin.
+func NewAuthorizer() (*cel.CelAuthorizer, error) {
+	return cel.NewCelAuthorizer(map[string]*authorize.RuleSet{
 	{{- range $key, $value := .Rules }}
 	{{$key}}: {
 		Rules: []*authorize.Rule{

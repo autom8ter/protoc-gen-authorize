@@ -11,7 +11,3 @@ plugins:
     out: gen
     opt:
       - paths=source_relative
-  - plugin: authorize
-    out: gen
-    opt:
-      - paths=source_relative

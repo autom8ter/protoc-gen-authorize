@@ -1,12 +1,16 @@
 # protoc-gen-authorize 🛡️
 
-**protoc-gen-authorize** is an innovative protoc plugin and library 🌟 designed to simplify and secure gRPC request authorization. 
-It seamlessly integrates authorization rules directly within your proto files 📝, reducing the need to clutter your application code with complex authorization logic. 
-Perfect for developers 👨‍💻👩‍💻 looking to streamline their security workflows in gRPC applications. 
-In this README, you'll find easy installation instructions 📥, examples 💡, and all you need to harness the power of expression-based rules for robust and efficient request handling 💼.
+**protoc-gen-authorize** is an innovative protoc plugin and library 🌟 designed to simplify and secure gRPC request
+authorization.
+It seamlessly integrates authorization rules directly within your proto files 📝, reducing the need to clutter your
+application code with complex authorization logic.
+Perfect for developers 👨‍💻👩‍💻 looking to streamline their security workflows in gRPC applications.
+In this README, you'll find easy installation instructions 📥, examples 💡, and all you need to harness the power of
+expression-based rules for robust and efficient request handling 💼.
 
 ## Features
-- [x] Javascript expression-based rules
+
+- [x] Javascript or [CEL](https://github.com/google/cel-go) expression-based rules
 - [x] Unary and Stream interceptors
 - [x] Protoc plugin for code generation
 - [x] Go library for authorizer creation along with interceptors
@@ -29,9 +33,11 @@ The interceptor library can be installed with the following command:
 
 ## Code Generation
 
-The plugin generates a function `NewJavascriptAuthorizer` with rules configured for each service method in the proto file 
-that has the `authorize.rules` option set. 
-The function returns a `JavascriptAuthorizer` that can be used with the interceptors in `github.com/autom8ter/protoc-gen-authorize/authorizer`
+The plugin generates a function `NewAuthorizer` with rules configured for each service method in the proto file
+that has the `authorize.rules` option set.
+The function returns an `Authorizer` implementation that can be used with the interceptors
+in `github.com/autom8ter/protoc-gen-authorize/authorizer`
+The language the authorizer is generated in can be configured with the `authorizer` option in the plugin configuration (CEL and javascript are supported).
 
 The authorizer plugin can generate code with buf or protoc and requires code generation for the grpc golang plugin.
 
@@ -55,12 +61,15 @@ plugins:
     out: gen
     opt:
       - paths=source_relative
+      - authorizer=javascript
+#      - authorizer=cel <- enable this option to use CEL instead of javascript
 ```
 
 ## Example
 
 See [example](example) for the full example.
 
+Javascript authorizer example:
 ```protobuf
 
 // Example service is an example of how to use the authorize rules
@@ -96,20 +105,22 @@ service ExampleService {
 }
 ```
 
-make sure to import "github.com/autom8ter/protoc-gen-authorize/authorizer" in your server code and use the authorizer interceptors:
+make sure to import "github.com/autom8ter/protoc-gen-authorize/authorizer" in your server code and use the authorizer
+interceptors:
+
 ```go
-    // create a new javascript authorizer from the generated javascript authorizer(protoc-gen-authorize)
-	jsAuthorizer, err := example.NewJavascriptAuthorizer()
+    // create a new authorizer from the generated function(protoc-gen-authorize)
+	authz, err := example.NewAuthorizer()
 	if err != nil {
 		return err
 	}
 	// create a new grpc server with the authorizer interceptors
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(
-			authorizer.UnaryServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
+			authorizer.UnaryServerInterceptor(authz, authorizer.WithUserExtractor(userExtractor)),
 		),
 		grpc.StreamInterceptor(
-			authorizer.StreamServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
+			authorizer.StreamServerInterceptor(authz, authorizer.WithUserExtractor(userExtractor)),
 		),
 	)
 	// register the example service
@@ -118,5 +129,11 @@ make sure to import "github.com/autom8ter/protoc-gen-authorize/authorizer" in yo
 
 ## Performance
 
-The default authorizer for the plugin uses goja, a JavaScript interpreter written in Go.
+The javascript authorizer for the plugin uses goja, a JavaScript interpreter written in Go.
 Most benchmarks show that most rule evaluations take < .05 ms to complete.
+
+The [CEL](github.com/google/cel-go) authorizer for the plugin uses cel-go, a CEL interpreter written in Go.
+Most benchmarks show that most rule evaluations take < .02 ms to complete.
+
+Use whichever authorizer you prefer, but CEL is recommended for performance.
+

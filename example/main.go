@@ -28,18 +28,18 @@ func userExtractor(ctx context.Context) (any, error) {
 }
 
 func runServer() error {
-	// create a new javascript authorizer from the generated javascript authorizer(protoc-gen-authorize)
-	jsAuthorizer, err := example.NewJavascriptAuthorizer()
+	// create a new authorizer from the generated function(protoc-gen-authorize)
+	authz, err := example.NewAuthorizer()
 	if err != nil {
 		return err
 	}
 	// create a new grpc server with the authorizer interceptors
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(
-			authorizer.UnaryServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
+			authorizer.UnaryServerInterceptor(authz, authorizer.WithUserExtractor(userExtractor)),
 		),
 		grpc.StreamInterceptor(
-			authorizer.StreamServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
+			authorizer.StreamServerInterceptor(authz, authorizer.WithUserExtractor(userExtractor)),
 		),
 	)
 	// register the example service

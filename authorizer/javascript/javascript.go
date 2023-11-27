@@ -1,4 +1,4 @@
-package authorizer
+package javascript
 
 import (
 	"context"
@@ -8,28 +8,14 @@ import (
 
 	"github.com/dop251/goja"
 
+	"github.com/autom8ter/protoc-gen-authorize/authorizer"
 	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
-)
-
-// ExpressionVar is a global variable injected into a javascript authorization expression
-type ExpressionVar string
-
-const (
-	// ExpressionVarRequest is the request object
-	ExpressionVarRequest ExpressionVar = "request"
-	// ExpressionVarMetadata is the metadata object
-	ExpressionVarMetadata ExpressionVar = "metadata"
-	// ExpressionVarUser is the user object
-	ExpressionVarUser ExpressionVar = "user"
-	// ExpressionVarIsStream is true if the grpc handler is a streaming handler
-	ExpressionVarIsStream ExpressionVar = "is_stream"
 )
 
 // JavascriptAuthorizer is a javascript vm that uses javascript expressions to authorize grpc requests
 type JavascriptAuthorizer struct {
 	rules          map[string]*authorize.RuleSet
-	cachedPrograms map[string]*goja.Program
-	mu             sync.RWMutex
+	cachedPrograms sync.Map
 	vms            chan *goja.Runtime
 }
 
@@ -39,8 +25,7 @@ type JavascriptAuthorizer struct {
 func NewJavascriptAuthorizer(rules map[string]*authorize.RuleSet) (*JavascriptAuthorizer, error) {
 	a := &JavascriptAuthorizer{
 		rules:          rules,
-		cachedPrograms: map[string]*goja.Program{},
-		mu:             sync.RWMutex{},
+		cachedPrograms: sync.Map{},
 		vms:            make(chan *goja.Runtime, 10),
 	}
 	{
@@ -58,7 +43,7 @@ func NewJavascriptAuthorizer(rules map[string]*authorize.RuleSet) (*JavascriptAu
 
 // AuthorizeMethod authorizes a gRPC method the RuleExecutionParams and returns a boolean representing whether the
 // request is authorized or not.
-func (a *JavascriptAuthorizer) AuthorizeMethod(ctx context.Context, method string, params *RuleExecutionParams) (bool, error) {
+func (a *JavascriptAuthorizer) AuthorizeMethod(ctx context.Context, method string, params *authorizer.RuleExecutionParams) (bool, error) {
 	rules, ok := a.rules[method]
 	if !ok {
 		return true, nil
@@ -74,16 +59,16 @@ func (a *JavascriptAuthorizer) AuthorizeMethod(ctx context.Context, method strin
 	for k, v := range params.Metadata {
 		metaMap[k] = strings.Join(v, ",")
 	}
-	if err := vm.Set(string(ExpressionVarMetadata), metaMap); err != nil {
+	if err := vm.Set(string(authorizer.ExpressionVarMetadata), metaMap); err != nil {
 		return false, fmt.Errorf("authorizer: failed to set metadata: %v", err.Error())
 	}
-	if err := vm.Set(string(ExpressionVarRequest), params.Request); err != nil {
+	if err := vm.Set(string(authorizer.ExpressionVarRequest), params.Request); err != nil {
 		return false, fmt.Errorf("authorizer: failed to set request: %v", err.Error())
 	}
-	if err := vm.Set(string(ExpressionVarUser), params.User); err != nil {
+	if err := vm.Set(string(authorizer.ExpressionVarUser), params.User); err != nil {
 		return false, fmt.Errorf("authorizer: failed to set user: %v", err.Error())
 	}
-	if err := vm.Set(string(ExpressionVarIsStream), params.IsStream); err != nil {
+	if err := vm.Set(string(authorizer.ExpressionVarIsStream), params.IsStream); err != nil {
 		return false, fmt.Errorf("authorizer: failed to set is_stream: %v", err.Error())
 	}
 	for _, program := range programs {
@@ -103,23 +88,16 @@ func (j *JavascriptAuthorizer) getMethodPrograms(rules *authorize.RuleSet) ([]*g
 		programs []*goja.Program
 		err      error
 	)
-	j.mu.RLock()
 	for _, rule := range rules.Rules {
-		program, ok := j.cachedPrograms[rule.Expression]
+		program, ok := j.cachedPrograms.Load(rule.Expression)
 		if !ok {
-			j.mu.RUnlock()
-			j.mu.Lock()
 			program, err = goja.Compile(rule.Expression, rule.Expression, true)
 			if err != nil {
-				j.mu.Unlock()
 				return nil, fmt.Errorf("authorizer: failed to compile expression: %v", err.Error())
 			}
-			j.cachedPrograms[rule.Expression] = program
-			j.mu.Unlock()
-			j.mu.RLock()
+			j.cachedPrograms.Store(rule.Expression, program)
 		}
-		programs = append(programs, program)
+		programs = append(programs, program.(*goja.Program))
 	}
-	j.mu.RUnlock()
 	return programs, nil
 }

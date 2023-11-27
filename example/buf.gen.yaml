@@ -15,3 +15,5 @@ plugins:
     out: gen
     opt:
       - paths=source_relative
+      - authorizer=javascript
+#      - authorizer=cel

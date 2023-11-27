@@ -1,10 +1,11 @@
-package authorizer_test
+package javascript_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/autom8ter/protoc-gen-authorize/authorizer"
+	"github.com/autom8ter/protoc-gen-authorize/authorizer/javascript"
 	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
@@ -289,7 +290,7 @@ func TestJavascriptAuthorizer_AuthorizeMethod(t *testing.T) {
 			if fix.method == "" {
 				t.Fatalf("method is required")
 			}
-			authz, err := authorizer.NewJavascriptAuthorizer(fix.rules)
+			authz, err := javascript.NewJavascriptAuthorizer(fix.rules)
 			if fix.expectError {
 				if err == nil {
 					t.Fatalf("expected error")
@@ -353,7 +354,7 @@ func BenchmarkJavascriptAuthorizer_AuthorizeMethod(b *testing.B) {
 			if fix.method == "" {
 				b.Fatalf("method is required")
 			}
-			authz, err := authorizer.NewJavascriptAuthorizer(fix.rules)
+			authz, err := javascript.NewJavascriptAuthorizer(fix.rules)
 			if fix.expectError {
 				if err == nil {
 					b.Fatalf("expected error")
