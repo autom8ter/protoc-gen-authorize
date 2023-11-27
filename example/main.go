@@ -1,30 +1,45 @@
 package main
 
 import (
-	`fmt`
-	`net`
+	"context"
+	"fmt"
+	"net"
 
-	`google.golang.org/grpc`
+	"google.golang.org/grpc"
 
-	`github.com/autom8ter/protoc-gen-authorize/authorizer`
-	`github.com/autom8ter/protoc-gen-authorize/example/gen/example`
-	`github.com/autom8ter/protoc-gen-authorize/example/server`
-	`github.com/autom8ter/protoc-gen-authorize/jsauthorizer`
+	"github.com/autom8ter/protoc-gen-authorize/authorizer"
+	"github.com/autom8ter/protoc-gen-authorize/example/gen/example"
+	"github.com/autom8ter/protoc-gen-authorize/example/server"
 )
 
-func runServer(opts ...jsauthorizer.Opt) error {
-	// create a new javascript authorizer
-	jsAuth, err := jsauthorizer.New()
+var testUser = &example.User{
+	Id:           "123",
+	Email:        "autom8ter@protoc-gen-authorizer.com",
+	Name:         "Autom8ter",
+	AccountIds:   []string{"940298", "123123"},
+	Roles:        []string{"admin", "user"},
+	IsSuperAdmin: false,
+}
+
+// userExtractor is a function that extracts a user from a context
+// in a real application, this would be a database lookup based on metadata extracted from the context
+func userExtractor(ctx context.Context) (any, error) {
+	return testUser, nil
+}
+
+func runServer() error {
+	// create a new javascript authorizer from the generated javascript authorizer(protoc-gen-authorize)
+	jsAuthorizer, err := example.NewJavascriptAuthorizer()
 	if err != nil {
 		return err
 	}
 	// create a new grpc server with the authorizer interceptors
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(
-			authorizer.UnaryServerInterceptor(jsAuth, example.AuthorizationRules),
+			authorizer.UnaryServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
 		),
 		grpc.StreamInterceptor(
-			authorizer.StreamServerInterceptor(jsAuth, example.AuthorizationRules),
+			authorizer.StreamServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
 		),
 	)
 	// register the example service

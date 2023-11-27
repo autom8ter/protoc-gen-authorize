@@ -21,13 +21,17 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	ExampleService_ExampleMethod1_FullMethodName = "/authorize.ExampleService/ExampleMethod1"
+	ExampleService_ExampleMethod2_FullMethodName = "/authorize.ExampleService/ExampleMethod2"
 )
 
 // ExampleServiceClient is the client API for ExampleService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ExampleServiceClient interface {
+	// ExampleMethod1 is an example of how to use the authorize rules
 	ExampleMethod1(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ExampleMethod2 is another example of how to use the authorize rules
+	ExampleMethod2(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type exampleServiceClient struct {
@@ -47,11 +51,23 @@ func (c *exampleServiceClient) ExampleMethod1(ctx context.Context, in *Request, 
 	return out, nil
 }
 
+func (c *exampleServiceClient) ExampleMethod2(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ExampleService_ExampleMethod2_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ExampleServiceServer is the server API for ExampleService service.
 // All implementations must embed UnimplementedExampleServiceServer
 // for forward compatibility
 type ExampleServiceServer interface {
+	// ExampleMethod1 is an example of how to use the authorize rules
 	ExampleMethod1(context.Context, *Request) (*emptypb.Empty, error)
+	// ExampleMethod2 is another example of how to use the authorize rules
+	ExampleMethod2(context.Context, *Request) (*emptypb.Empty, error)
 	mustEmbedUnimplementedExampleServiceServer()
 }
 
@@ -61,6 +77,9 @@ type UnimplementedExampleServiceServer struct {
 
 func (UnimplementedExampleServiceServer) ExampleMethod1(context.Context, *Request) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExampleMethod1 not implemented")
+}
+func (UnimplementedExampleServiceServer) ExampleMethod2(context.Context, *Request) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExampleMethod2 not implemented")
 }
 func (UnimplementedExampleServiceServer) mustEmbedUnimplementedExampleServiceServer() {}
 
@@ -93,6 +112,24 @@ func _ExampleService_ExampleMethod1_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ExampleService_ExampleMethod2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExampleServiceServer).ExampleMethod2(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ExampleService_ExampleMethod2_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExampleServiceServer).ExampleMethod2(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ExampleService_ServiceDesc is the grpc.ServiceDesc for ExampleService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -103,6 +140,10 @@ var ExampleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExampleMethod1",
 			Handler:    _ExampleService_ExampleMethod1_Handler,
+		},
+		{
+			MethodName: "ExampleMethod2",
+			Handler:    _ExampleService_ExampleMethod2_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

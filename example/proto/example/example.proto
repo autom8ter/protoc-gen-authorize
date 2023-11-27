@@ -6,53 +6,48 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 import "authorize/authorize.proto";
 
+// Request is an example of a request object that would be passed into the authorize rules
 message Request {
-  string str_value = 1;
-  int64 int_value = 2;
-  bool bool_value = 3;
-  double double_value = 4;
-  float float_value = 5;
-  repeated string str_array = 6;
-  repeated int64 int_array = 7;
-  repeated bool bool_array = 8;
-  repeated double double_array = 9;
-  google.protobuf.Struct struct_value = 10;
+  string account_id = 1;
+  string message = 2;
 }
 
+// User is an example of a user object that would be passed into the authorize rules
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  repeated string account_ids = 4;
+  repeated string roles = 5;
+  bool is_super_admin = 6;
+}
+
+// Example service is an example of how to use the authorize rules
 service ExampleService {
+  // ExampleMethod1 is an example of how to use the authorize rules
   rpc ExampleMethod1(Request) returns (google.protobuf.Empty){
     option (authorize.rules) = {
-      // Allow if any of the rules are true
+      // Allow if the user has access to the account id in the request and has the admin role OR if the user is a super admin
       rules: [
         {
-          expression: "request.StrValue == 'hello'",
+          expression: "user.AccountIds.includes(request.AccountId) && user.Roles.includes('admin')",
         },
         {
-          expression: "request.IntValue == 1",
+          expression: "user.IsSuperAdmin",
+        }
+      ]
+    };
+  }
+  // ExampleMethod2 is another example of how to use the authorize rules
+  rpc ExampleMethod2(Request) returns (google.protobuf.Empty){
+    option (authorize.rules) = {
+      // Allow if the user has access to the account id in the metadata(x-account-id) and has the admin role OR if the user is a super admin
+      rules: [
+        {
+          expression: "user.AccountIds.includes(metadata['x-account-id']) && user.Roles.includes('admin')",
         },
         {
-          expression: "request.BoolValue == true",
-        },
-        {
-          expression: "request.DoubleValue == 1.0",
-        },
-        {
-          expression: "request.FloatValue == 1.0",
-        },
-        {
-          expression: "request.StrArray == ['hello', 'world']",
-        },
-        {
-          expression: "request.IntArray == [1, 2]",
-        },
-        {
-          expression: "request.BoolArray == [true, false]",
-        },
-        {
-          expression: "request.DoubleArray == [1.0, 2.0]",
-        },
-        {
-          expression: "request.StructValue == {key: 'value'}",
+          expression: "user.IsSuperAdmin",
         }
       ]
     };

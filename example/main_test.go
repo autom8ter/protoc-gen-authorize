@@ -1,13 +1,16 @@
 package main
 
 import (
-	`context`
-	`testing`
-	`time`
+	"context"
+	"testing"
+	"time"
 
-	`google.golang.org/grpc`
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
-	`github.com/autom8ter/protoc-gen-authorize/example/gen/example`
+	"github.com/autom8ter/protoc-gen-authorize/example/gen/example"
 )
 
 func Test(t *testing.T) {
@@ -24,9 +27,50 @@ func Test(t *testing.T) {
 	}
 	client := example.NewExampleServiceClient(conn)
 
-	if _, err := client.ExampleMethod1(context.Background(), &example.Request{
-		StrValue: "hello",
-	}); err != nil {
-		t.Fatalf("failed to call ExampleMethod1: %v", err)
+	{
+		// permission denied
+		if _, err := client.ExampleMethod1(context.Background(), &example.Request{
+			AccountId: "123",
+			Message:   "hello",
+		}); err == nil {
+			t.Fatalf("expected error, got nil")
+		} else {
+			if status.Code(err) != codes.PermissionDenied {
+				t.Fatalf("expected error code %v, got %v", codes.PermissionDenied, status.Code(err))
+			}
+		}
+	}
+	{
+		// authorized: user.AccountIds.includes(request.account_id) && user.Roles.includes('admin')
+		if _, err := client.ExampleMethod1(context.Background(), &example.Request{
+			AccountId: testUser.AccountIds[0],
+			Message:   "hello",
+		}); err != nil {
+			t.Fatalf("failed to call ExampleMethod1: %v", err)
+		}
+	}
+	{
+		// permission denied
+		if _, err := client.ExampleMethod2(context.Background(), &example.Request{
+			AccountId: testUser.AccountIds[0],
+			Message:   "hello",
+		}); err == nil {
+			t.Fatalf("expected error, got nil")
+		} else {
+			if status.Code(err) != codes.PermissionDenied {
+				t.Fatalf("expected error code %v, got %v", codes.PermissionDenied, status.Code(err))
+			}
+		}
+	}
+	{
+		// authorized: user.AccountIds.includes(metadata['x-account-id']) && user.Roles.includes('admin')
+		ctx := context.Background()
+		ctx = metadata.AppendToOutgoingContext(ctx, "x-account-id", testUser.AccountIds[0])
+		if _, err := client.ExampleMethod2(ctx, &example.Request{
+			AccountId: testUser.AccountIds[0],
+			Message:   "hello",
+		}); err != nil {
+			t.Fatalf("failed to call ExampleMethod2: %v", err)
+		}
 	}
 }

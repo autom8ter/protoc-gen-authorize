@@ -7,70 +7,107 @@ rules in the proto file itself, instead of in the application code.
 ## Installation
 
 The plugin can be installed with the following command:
+
 ```bash
     go install github.com/autom8ter/protoc-gen-authorize
 ```
 
+The interceptor library can be installed with the following command:
+
+```bash
+    go get github.com/autom8ter/protoc-gen-authorize/authorize
+```
+
+## Code Generation
+
+The plugin generates a function `NewJavascriptAuthorizer` with rules configured for each service method in the proto file 
+that has the `authorize.rules` option set. 
+The function returns a `JavascriptAuthorizer` that can be used with the interceptors in `github.com/autom8ter/protoc-gen-authorize/authorize`
+
+The authorizer plugin can generate code with buf or protoc and requires code generation for the grpc golang plugin.
+
+buf.gen.yaml example:
+
+```yaml
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/autom8ter/protoc-gen-authorize/gen
+plugins:
+  - plugin: buf.build/protocolbuffers/go
+    out: gen
+    opt: paths=source_relative
+  - plugin: buf.build/grpc/go
+    out: gen
+    opt:
+      - paths=source_relative
+  - plugin: authorize
+    out: gen
+    opt:
+      - paths=source_relative
+```
+
 ## Example
+
+See [example](example) for the full example.
 
 ```protobuf
 
+// Example service is an example of how to use the authorize rules
 service ExampleService {
+  // ExampleMethod1 is an example of how to use the authorize rules
   rpc ExampleMethod1(Request) returns (google.protobuf.Empty){
     option (authorize.rules) = {
-      // allow if request.StrValue == 'hello'
+      // Allow if the user has access to the account id in the request and has the admin role OR if the user is a super admin
       rules: [
         {
-          expression: "request.StrValue == 'hello'",
-        },
-        // allow if request.IntValue == 1
-        {
-          expression: "request.IntValue == 1",
-        },
-        // allow if request.BoolValue == true
-        {
-          expression: "request.BoolValue == true",
-        },
-        // allow if request.DoubleValue == 1.0
-        {
-          expression: "request.DoubleValue == 1.0",
-        },
-        // allow if request.FloatValue == 1.0
-        {
-          expression: "request.FloatValue == 1.0",
-        },
-        // allow if request.StructValue == {key: 'value'}
-        {
-          expression: "request.StructValue == {key: 'value'}",
-        },
-        // allow if request.StrArray == ['hello', 'world']
-        {
-          expression: "request.StrArray == ['hello', 'world']",
-        },
-        // allow if request.IntArray == [1, 2]
-        {
-          expression: "request.IntArray == [1, 2]",
-        },
-        // allow if request.BoolArray == [true, false]
-        {
-          expression: "request.BoolArray == [true, false]",
-        },
-        // allow if request.FloatArray == [1.0, 2.0]
-        {
-          expression: "request.FloatArray == [1.0, 2.0]",
-        },
-        // allow if request.DoubleArray == [1.0, 2.0]
-        {
-          expression: "request.DoubleArray == [1.0, 2.0]",
+          expression: "user.AccountIds.includes(request.AccountId) && user.Roles.includes('admin')",
         },
         {
-          expression: "request.StructValue == {key: 'value'}",
+          expression: "user.IsSuperAdmin",
+        }
+      ]
+    };
+  }
+  // ExampleMethod2 is another example of how to use the authorize rules
+  rpc ExampleMethod2(Request) returns (google.protobuf.Empty){
+    option (authorize.rules) = {
+      // Allow if the user has access to the account id in the metadata(x-account-id) and has the admin role OR if the user is a super admin
+      rules: [
+        {
+          expression: "user.AccountIds.includes(metadata['x-account-id']) && user.Roles.includes('admin')",
+        },
+        {
+          expression: "user.IsSuperAdmin",
         }
       ]
     };
   }
 }
-
 ```
 
-See [example](example) for the full example.
+make sure to import "github.com/autom8ter/protoc-gen-authorize/authorizer" in your server code and use the authorizer interceptors:
+```go
+    // create a new javascript authorizer from the generated javascript authorizer(protoc-gen-authorize)
+	jsAuthorizer, err := example.NewJavascriptAuthorizer()
+	if err != nil {
+		return err
+	}
+	// create a new grpc server with the authorizer interceptors
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(
+			authorizer.UnaryServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
+		),
+		grpc.StreamInterceptor(
+			authorizer.StreamServerInterceptor(jsAuthorizer, authorizer.WithUserExtractor(userExtractor)),
+		),
+	)
+	// register the example service
+	example.RegisterExampleServiceServer(srv, server.NewExampleServer())
+```
+
+## Performance
+
+The default authorizer for the plugin uses goja, a JavaScript interpreter written in Go.
+Most benchmarks show that most rule evaluations take < .05 ms to complete.

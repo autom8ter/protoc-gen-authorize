@@ -87,10 +87,13 @@ var tmpl = `
 package {{ .Package }}
 
 import (
+	"github.com/autom8ter/protoc-gen-authorize/authorizer"
 	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
-var AuthorizationRules = map[string]*authorize.RuleSet{
+
+func NewJavascriptAuthorizer() (*authorizer.JavascriptAuthorizer, error) {
+	return authorizer.NewJavascriptAuthorizer(map[string]*authorize.RuleSet{
 	{{- range $key, $value := .Rules }}
 	{{$key}}: {
 		Rules: []*authorize.Rule{
@@ -102,5 +105,6 @@ var AuthorizationRules = map[string]*authorize.RuleSet{
 		},
 	},
 	{{- end }}
+})
 }
 `

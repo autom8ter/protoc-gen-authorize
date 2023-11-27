@@ -7,8 +7,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
 // RuleExecutionParams is the set of parameters passed to the Authorizer.ExecuteRule function
@@ -23,70 +21,95 @@ type RuleExecutionParams struct {
 	IsStream bool
 }
 
+// UserExtractor is a function that extracts a user from a context so it's attributes can be used in rule expression evaluation
+type UserExtractor func(ctx context.Context) (any, error)
+
 // Authorizer is an interface for authorizing grpc requests
 type Authorizer interface {
-	// ExtractUser extracts a user from the context so it's attributes can be used in rule expression evaluation
-	ExtractUser(ctx context.Context) (any, error)
-	// ExecuteRule executes a rule against the RuleExecutionParams and returns a boolean representing whether the
-	// rule passed or not.
-	ExecuteRule(ctx context.Context, rule *authorize.Rule, params *RuleExecutionParams) (allow bool, err error)
+	// AuthorizeMethod is called by the grpc interceptor to authorize a request
+	AuthorizeMethod(ctx context.Context, method string, params *RuleExecutionParams) (allow bool, err error)
 }
 
-// UnaryServerInterceptor is a grpc unary middleware for authorization
-func UnaryServerInterceptor(authorizer Authorizer, ruleSet map[string]*authorize.RuleSet) grpc.UnaryServerInterceptor {
+type options struct {
+	userExtractor UserExtractor
+}
+
+// Opt is an option for configuring the interceptor
+type Opt func(o *options)
+
+// WithUserExtractor sets the user extractor function that will be used by the interceptor
+// to extract a user from the context so it's attributes can be used in rule expression evaluation.
+// It is injected into the expression vm as the "user" variable
+func WithUserExtractor(extractor UserExtractor) Opt {
+	return func(o *options) {
+		o.userExtractor = extractor
+	}
+}
+
+// UnaryServerInterceptor uses the given authorizer to authorize unary grpc requests.
+// JavascriptAuthorizer is an implementation of Authorizer that uses javascript expressions to authorize requests
+func UnaryServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.UnaryServerInterceptor {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		rules, ok := ruleSet[info.FullMethod]
-		if !ok {
-			return handler(ctx, req)
-		}
-		usr, err := authorizer.ExtractUser(ctx)
-		if err != nil {
-			return nil, err
-		}
-		md, _ := metadata.FromIncomingContext(ctx)
-		for _, rule := range rules.Rules {
-			allow, err := authorizer.ExecuteRule(ctx, rule, &RuleExecutionParams{
-				User:     usr,
-				Request:  req,
-				Metadata: md,
-			})
+		var (
+			usr any
+			err error
+		)
+		if o.userExtractor != nil {
+			usr, err = o.userExtractor(ctx)
 			if err != nil {
 				return nil, err
 			}
-			if allow {
-				return handler(ctx, req)
-			}
+		}
+		md, _ := metadata.FromIncomingContext(ctx)
+		authorized, err := authorizer.AuthorizeMethod(ctx, info.FullMethod, &RuleExecutionParams{
+			User:     usr,
+			Request:  req,
+			Metadata: md,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if authorized {
+			return handler(ctx, req)
 		}
 		return nil, status.Errorf(codes.PermissionDenied, "authorizer: permission denied")
 	}
 }
 
-// StreamServerInterceptor is a grpc streaming middleware for authorization
-// Request is nil because it is not available in the context for streaming requests
-func StreamServerInterceptor(authorizer Authorizer, ruleSet map[string]*authorize.RuleSet) grpc.StreamServerInterceptor {
+// StreamServerInterceptor uses the given authorizer to authorize streaming grpc requests.
+// JavascriptAuthorizer is an implementation of Authorizer that uses javascript expressions to authorize requests
+// the request object in the expression evaluation is nil because it is not available in the context for streaming requests
+func StreamServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.StreamServerInterceptor {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		rules, ok := ruleSet[info.FullMethod]
-		if !ok {
-			return handler(srv, ss)
-		}
-		usr, err := authorizer.ExtractUser(ss.Context())
-		if err != nil {
-			return err
-		}
-		md, _ := metadata.FromIncomingContext(ss.Context())
-		for _, rule := range rules.Rules {
-			allow, err := authorizer.ExecuteRule(ss.Context(), rule, &RuleExecutionParams{
-				User:     usr,
-				Request:  nil,
-				Metadata: md,
-				IsStream: true,
-			})
+		var (
+			usr any
+			err error
+		)
+		if o.userExtractor != nil {
+			usr, err = o.userExtractor(ss.Context())
 			if err != nil {
 				return err
 			}
-			if allow {
-				return handler(srv, ss)
-			}
+		}
+		md, _ := metadata.FromIncomingContext(ss.Context())
+		authorized, err := authorizer.AuthorizeMethod(ss.Context(), info.FullMethod, &RuleExecutionParams{
+			User:     usr,
+			Metadata: md,
+			IsStream: true,
+		})
+		if err != nil {
+			return err
+		}
+		if authorized {
+			return handler(srv, ss)
 		}
 		return status.Errorf(codes.PermissionDenied, "authorizer: permission denied")
 	}

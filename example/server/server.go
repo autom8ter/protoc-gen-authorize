@@ -1,11 +1,11 @@
 package server
 
 import (
-	`context`
+	"context"
 
-	`google.golang.org/protobuf/types/known/emptypb`
+	"google.golang.org/protobuf/types/known/emptypb"
 
-	`github.com/autom8ter/protoc-gen-authorize/example/gen/example`
+	"github.com/autom8ter/protoc-gen-authorize/example/gen/example"
 )
 
 type exampleServer struct {
@@ -17,5 +17,9 @@ func NewExampleServer() example.ExampleServiceServer {
 }
 
 func (e *exampleServer) ExampleMethod1(ctx context.Context, request *example.Request) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
+func (e *exampleServer) ExampleMethod2(ctx context.Context, request *example.Request) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
