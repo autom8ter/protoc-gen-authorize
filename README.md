@@ -15,14 +15,14 @@ The plugin can be installed with the following command:
 The interceptor library can be installed with the following command:
 
 ```bash
-    go get github.com/autom8ter/protoc-gen-authorize/authorize
+    go get github.com/autom8ter/protoc-gen-authorize/authorizer
 ```
 
 ## Code Generation
 
 The plugin generates a function `NewJavascriptAuthorizer` with rules configured for each service method in the proto file 
 that has the `authorize.rules` option set. 
-The function returns a `JavascriptAuthorizer` that can be used with the interceptors in `github.com/autom8ter/protoc-gen-authorize/authorize`
+The function returns a `JavascriptAuthorizer` that can be used with the interceptors in `github.com/autom8ter/protoc-gen-authorize/authorizer`
 
 The authorizer plugin can generate code with buf or protoc and requires code generation for the grpc golang plugin.
 
