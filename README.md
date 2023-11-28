@@ -117,10 +117,10 @@ interceptors:
 	// create a new grpc server with the authorizer interceptors
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(
-			authorizer.UnaryServerInterceptor(authz, authorizer.WithUserExtractor(userExtractor)),
+			authorizer.UnaryServerInterceptor([]authorizer.Authorizer{authz}, authorizer.WithUserExtractor(userExtractor)),
 		),
 		grpc.StreamInterceptor(
-			authorizer.StreamServerInterceptor(authz, authorizer.WithUserExtractor(userExtractor)),
+			authorizer.StreamServerInterceptor([]authorizer.Authorizer{authz}, authorizer.WithUserExtractor(userExtractor)),
 		),
 	)
 	// register the example service

@@ -256,7 +256,7 @@ var fixtures = []fixture{
 		expectAllow: false,
 	},
 	{
-		name:   "missing rule for method 8 (allow)",
+		name:   "missing rule for method 8 (deny)",
 		method: "testing1",
 		params: &authorizer.RuleExecutionParams{
 			User: &User{
@@ -279,7 +279,7 @@ var fixtures = []fixture{
 				},
 			},
 		},
-		expectAllow: true,
+		expectAllow: false,
 	},
 }
 
@@ -344,8 +344,8 @@ BenchmarkJavascriptAuthorizer_AuthorizeMethod/basic_user_expression_w/_metadata_
 BenchmarkJavascriptAuthorizer_AuthorizeMethod/basic_user_expression_w/_metadata_check_rule_6_(allow)-8         	   82628	     14216 ns/op
 BenchmarkJavascriptAuthorizer_AuthorizeMethod/basic_user_expression_w/_metadata_check_rule_7_(deny)
 BenchmarkJavascriptAuthorizer_AuthorizeMethod/basic_user_expression_w/_metadata_check_rule_7_(deny)-8          	   77010	     15712 ns/op
-BenchmarkJavascriptAuthorizer_AuthorizeMethod/missing_rule_for_method_8_(allow)
-BenchmarkJavascriptAuthorizer_AuthorizeMethod/missing_rule_for_method_8_(allow)-8                              	152635189	         7.879 ns/op
+BenchmarkJavascriptAuthorizer_AuthorizeMethod/missing_rule_for_method_8_(deny)
+BenchmarkJavascriptAuthorizer_AuthorizeMethod/missing_rule_for_method_8_(deny)-8                              	152635189	         7.879 ns/op
 */
 func BenchmarkJavascriptAuthorizer_AuthorizeMethod(b *testing.B) {
 	ctx := context.Background()

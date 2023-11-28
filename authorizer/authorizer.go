@@ -62,7 +62,7 @@ func WithUserExtractor(extractor UserExtractor) Opt {
 
 // UnaryServerInterceptor uses the given authorizer to authorize unary grpc requests.
 // JavascriptAuthorizer is an implementation of Authorizer that uses javascript expressions to authorize requests
-func UnaryServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.UnaryServerInterceptor {
+func UnaryServerInterceptor(authorizer []Authorizer, opts ...Opt) grpc.UnaryServerInterceptor {
 	o := &options{}
 	for _, opt := range opts {
 		opt(o)
@@ -79,17 +79,20 @@ func UnaryServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.UnaryServer
 			}
 		}
 		md, _ := metadata.FromIncomingContext(ctx)
-		authorized, err := authorizer.AuthorizeMethod(ctx, info.FullMethod, &RuleExecutionParams{
-			User:     usr,
-			Request:  req,
-			Metadata: md,
-		})
-		if err != nil {
-			return nil, err
+		for _, a := range authorizer {
+			authorized, err := a.AuthorizeMethod(ctx, info.FullMethod, &RuleExecutionParams{
+				User:     usr,
+				Request:  req,
+				Metadata: md,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if authorized {
+				return handler(ctx, req)
+			}
 		}
-		if authorized {
-			return handler(ctx, req)
-		}
+
 		return nil, status.Errorf(codes.PermissionDenied, "authorizer: permission denied")
 	}
 }
@@ -97,7 +100,7 @@ func UnaryServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.UnaryServer
 // StreamServerInterceptor uses the given authorizer to authorize streaming grpc requests.
 // JavascriptAuthorizer is an implementation of Authorizer that uses javascript expressions to authorize requests
 // the request object in the expression evaluation is nil because it is not available in the context for streaming requests
-func StreamServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.StreamServerInterceptor {
+func StreamServerInterceptor(authorizer []Authorizer, opts ...Opt) grpc.StreamServerInterceptor {
 	o := &options{}
 	for _, opt := range opts {
 		opt(o)
@@ -114,16 +117,18 @@ func StreamServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.StreamServ
 			}
 		}
 		md, _ := metadata.FromIncomingContext(ss.Context())
-		authorized, err := authorizer.AuthorizeMethod(ss.Context(), info.FullMethod, &RuleExecutionParams{
-			User:     usr,
-			Metadata: md,
-			IsStream: true,
-		})
-		if err != nil {
-			return err
-		}
-		if authorized {
-			return handler(srv, ss)
+		for _, a := range authorizer {
+			authorized, err := a.AuthorizeMethod(ss.Context(), info.FullMethod, &RuleExecutionParams{
+				User:     usr,
+				Metadata: md,
+				IsStream: true,
+			})
+			if err != nil {
+				return err
+			}
+			if authorized {
+				return handler(srv, ss)
+			}
 		}
 		return status.Errorf(codes.PermissionDenied, "authorizer: permission denied")
 	}

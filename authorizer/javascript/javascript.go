@@ -46,7 +46,7 @@ func NewJavascriptAuthorizer(rules map[string]*authorize.RuleSet) (*JavascriptAu
 func (a *JavascriptAuthorizer) AuthorizeMethod(ctx context.Context, method string, params *authorizer.RuleExecutionParams) (bool, error) {
 	rules, ok := a.rules[method]
 	if !ok {
-		return true, nil
+		return false, nil
 	}
 	programs, err := a.getMethodPrograms(rules)
 	if err != nil {

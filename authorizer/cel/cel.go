@@ -35,7 +35,7 @@ func NewCelAuthorizer(rules map[string]*authorize.RuleSet) (*CelAuthorizer, erro
 func (a *CelAuthorizer) AuthorizeMethod(ctx context.Context, method string, params *authorizer.RuleExecutionParams) (bool, error) {
 	rules, ok := a.rules[method]
 	if !ok {
-		return true, nil
+		return false, nil
 	}
 	programs, err := a.getMethodPrograms(rules)
 	if err != nil {
