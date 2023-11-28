@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package authorize;
 
+option go_package = "github.com/autom8ter/proto/gen/authorize;authorize";
+
 import "google/protobuf/descriptor.proto";
 
 // The authorization configuration for a service method.

@@ -9,8 +9,9 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/autom8ter/proto/gen/authorize"
+
 	"github.com/autom8ter/protoc-gen-authorize/authorizer"
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
 // CelAuthorizer is a javascript vm that uses javascript expressions to authorize grpc requests

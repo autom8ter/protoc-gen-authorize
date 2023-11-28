@@ -9,7 +9,7 @@ import (
 	pgs "github.com/lyft/protoc-gen-star"
 	pgsgo "github.com/lyft/protoc-gen-star/lang/go"
 
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
+	"github.com/autom8ter/proto/gen/authorize"
 )
 
 // Module is the protoc-gen-authorizer module
@@ -105,8 +105,9 @@ var javascriptTmpl = `
 package {{ .Package }}
 
 import (
+	"github.com/autom8ter/proto/gen/authorize"
+
 	"github.com/autom8ter/protoc-gen-authorize/authorizer/javascript"
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
 // NewAuthorizer returns a new javascript authorizer. The rules map is a map of method names to RuleSets. The RuleSets are used to
@@ -133,8 +134,9 @@ var celTmpl = `
 package {{ .Package }}
 
 import (
+	"github.com/autom8ter/proto/gen/authorize"
+
 	"github.com/autom8ter/protoc-gen-authorize/authorizer/cel"
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
 // NewAuthorizer returns a new javascript authorizer. The rules map is a map of method names to RuleSets. The RuleSets are used to

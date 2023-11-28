@@ -8,8 +8,8 @@ import (
 
 	"github.com/dop251/goja"
 
+	"github.com/autom8ter/proto/gen/authorize"
 	"github.com/autom8ter/protoc-gen-authorize/authorizer"
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
 // JavascriptAuthorizer is a javascript vm that uses javascript expressions to authorize grpc requests

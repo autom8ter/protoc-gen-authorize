@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/autom8ter/proto/gen/authorize"
+
 	"github.com/autom8ter/protoc-gen-authorize/authorizer"
 	"github.com/autom8ter/protoc-gen-authorize/authorizer/javascript"
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
 type fixture struct {

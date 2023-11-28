@@ -48,7 +48,7 @@ version: v1
 managed:
   enabled: true
   go_package_prefix:
-    default: github.com/autom8ter/protoc-gen-authorize/gen
+    default: github.com/autom8ter/proto/gen
 plugins:
   - plugin: buf.build/protocolbuffers/go
     out: gen
@@ -76,7 +76,7 @@ Javascript authorizer example:
 service ExampleService {
   // ExampleMethod1 is an example of how to use the authorize rules
   rpc ExampleMethod1(Request) returns (google.protobuf.Empty){
-    option (authorize.rules) = {
+    option (imports.authorize.rules) = {
       // Allow if the user has access to the account id in the request and has the admin role OR if the user is a super admin
       rules: [
         {
@@ -90,7 +90,7 @@ service ExampleService {
   }
   // ExampleMethod2 is another example of how to use the authorize rules
   rpc ExampleMethod2(Request) returns (google.protobuf.Empty){
-    option (authorize.rules) = {
+    option (imports.authorize.rules) = {
       // Allow if the user has access to the account id in the metadata(x-account-id) and has the admin role OR if the user is a super admin
       rules: [
         {

@@ -1,8 +1,9 @@
 package example
 
 import (
+	"github.com/autom8ter/proto/gen/authorize"
+
 	"github.com/autom8ter/protoc-gen-authorize/authorizer/javascript"
-	"github.com/autom8ter/protoc-gen-authorize/gen/authorize"
 )
 
 // NewAuthorizer returns a new javascript authorizer. The rules map is a map of method names to RuleSets. The RuleSets are used to
