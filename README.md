@@ -45,10 +45,6 @@ buf.gen.yaml example:
 
 ```yaml
 version: v1
-managed:
-  enabled: true
-  go_package_prefix:
-    default: github.com/autom8ter/proto/gen
 plugins:
   - plugin: buf.build/protocolbuffers/go
     out: gen
