@@ -26,10 +26,9 @@ message User {
 
 // Example service is an example of how to use the authorize rules
 service ExampleService {
-  // ExampleMethod1 is an example of how to use the authorize rules
-  rpc ExampleMethod1(Request) returns (google.protobuf.Empty){
+  // RequestMatch - Only super admins OR users with the admin role and access to the account id in the request will be allowed
+  rpc RequestMatch(Request) returns (google.protobuf.Empty){
     option (authorize.rules) = {
-      // Allow if the user has access to the account id in the request and has the admin role OR if the user is a super admin
       rules: [
         {
           expression: "user.AccountIds.includes(request.AccountId) && user.Roles.includes('admin')",
@@ -40,16 +39,25 @@ service ExampleService {
       ]
     };
   }
-  // ExampleMethod2 is another example of how to use the authorize rules
-  rpc ExampleMethod2(Request) returns (google.protobuf.Empty){
+  // MetadataMatch - Only super admins OR users with the admin role and access to the account id in the metadata will be allowed
+  rpc MetadataMatch(Request) returns (google.protobuf.Empty){
     option (authorize.rules) = {
-      // Allow if the user has access to the account id in the metadata(x-account-id) and has the admin role OR if the user is a super admin
       rules: [
         {
           expression: "user.AccountIds.includes(metadata['x-account-id']) && user.Roles.includes('admin')",
         },
         {
           expression: "user.IsSuperAdmin",
+        }
+      ]
+    };
+  }
+  // AllowAll is an example of how to configure a method to allow all requests (a single rule with a wildcard expression)
+  rpc AllowAll(Request) returns (google.protobuf.Empty){
+    option (authorize.rules) = {
+      rules: [
+        {
+          expression: "*",
         }
       ]
     };

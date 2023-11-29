@@ -16,10 +16,14 @@ func NewExampleServer() example.ExampleServiceServer {
 	return &exampleServer{}
 }
 
-func (e *exampleServer) ExampleMethod1(ctx context.Context, request *example.Request) (*emptypb.Empty, error) {
+func (e *exampleServer) RequestMatch(ctx context.Context, request *example.Request) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
 
-func (e *exampleServer) ExampleMethod2(ctx context.Context, request *example.Request) (*emptypb.Empty, error) {
+func (e *exampleServer) MetadataMatch(ctx context.Context, request *example.Request) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
+func (e *exampleServer) AllowAll(ctx context.Context, request *example.Request) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }

@@ -20,18 +20,21 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ExampleService_ExampleMethod1_FullMethodName = "/authorize.ExampleService/ExampleMethod1"
-	ExampleService_ExampleMethod2_FullMethodName = "/authorize.ExampleService/ExampleMethod2"
+	ExampleService_RequestMatch_FullMethodName  = "/authorize.ExampleService/RequestMatch"
+	ExampleService_MetadataMatch_FullMethodName = "/authorize.ExampleService/MetadataMatch"
+	ExampleService_AllowAll_FullMethodName      = "/authorize.ExampleService/AllowAll"
 )
 
 // ExampleServiceClient is the client API for ExampleService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ExampleServiceClient interface {
-	// ExampleMethod1 is an example of how to use the authorize rules
-	ExampleMethod1(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ExampleMethod2 is another example of how to use the authorize rules
-	ExampleMethod2(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// RequestMatch - Only super admins OR users with the admin role and access to the account id in the request will be allowed
+	RequestMatch(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// MetadataMatch - Only super admins OR users with the admin role and access to the account id in the metadata will be allowed
+	MetadataMatch(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// AllowAll is an example of how to configure a method to allow all requests (a single rule with a wildcard expression)
+	AllowAll(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type exampleServiceClient struct {
@@ -42,18 +45,27 @@ func NewExampleServiceClient(cc grpc.ClientConnInterface) ExampleServiceClient {
 	return &exampleServiceClient{cc}
 }
 
-func (c *exampleServiceClient) ExampleMethod1(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *exampleServiceClient) RequestMatch(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ExampleService_ExampleMethod1_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ExampleService_RequestMatch_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *exampleServiceClient) ExampleMethod2(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *exampleServiceClient) MetadataMatch(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ExampleService_ExampleMethod2_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ExampleService_MetadataMatch_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *exampleServiceClient) AllowAll(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ExampleService_AllowAll_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,10 +76,12 @@ func (c *exampleServiceClient) ExampleMethod2(ctx context.Context, in *Request, 
 // All implementations must embed UnimplementedExampleServiceServer
 // for forward compatibility
 type ExampleServiceServer interface {
-	// ExampleMethod1 is an example of how to use the authorize rules
-	ExampleMethod1(context.Context, *Request) (*emptypb.Empty, error)
-	// ExampleMethod2 is another example of how to use the authorize rules
-	ExampleMethod2(context.Context, *Request) (*emptypb.Empty, error)
+	// RequestMatch - Only super admins OR users with the admin role and access to the account id in the request will be allowed
+	RequestMatch(context.Context, *Request) (*emptypb.Empty, error)
+	// MetadataMatch - Only super admins OR users with the admin role and access to the account id in the metadata will be allowed
+	MetadataMatch(context.Context, *Request) (*emptypb.Empty, error)
+	// AllowAll is an example of how to configure a method to allow all requests (a single rule with a wildcard expression)
+	AllowAll(context.Context, *Request) (*emptypb.Empty, error)
 	mustEmbedUnimplementedExampleServiceServer()
 }
 
@@ -75,11 +89,14 @@ type ExampleServiceServer interface {
 type UnimplementedExampleServiceServer struct {
 }
 
-func (UnimplementedExampleServiceServer) ExampleMethod1(context.Context, *Request) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExampleMethod1 not implemented")
+func (UnimplementedExampleServiceServer) RequestMatch(context.Context, *Request) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestMatch not implemented")
 }
-func (UnimplementedExampleServiceServer) ExampleMethod2(context.Context, *Request) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExampleMethod2 not implemented")
+func (UnimplementedExampleServiceServer) MetadataMatch(context.Context, *Request) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MetadataMatch not implemented")
+}
+func (UnimplementedExampleServiceServer) AllowAll(context.Context, *Request) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AllowAll not implemented")
 }
 func (UnimplementedExampleServiceServer) mustEmbedUnimplementedExampleServiceServer() {}
 
@@ -94,38 +111,56 @@ func RegisterExampleServiceServer(s grpc.ServiceRegistrar, srv ExampleServiceSer
 	s.RegisterService(&ExampleService_ServiceDesc, srv)
 }
 
-func _ExampleService_ExampleMethod1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ExampleService_RequestMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ExampleServiceServer).ExampleMethod1(ctx, in)
+		return srv.(ExampleServiceServer).RequestMatch(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ExampleService_ExampleMethod1_FullMethodName,
+		FullMethod: ExampleService_RequestMatch_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExampleServiceServer).ExampleMethod1(ctx, req.(*Request))
+		return srv.(ExampleServiceServer).RequestMatch(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ExampleService_ExampleMethod2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ExampleService_MetadataMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ExampleServiceServer).ExampleMethod2(ctx, in)
+		return srv.(ExampleServiceServer).MetadataMatch(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ExampleService_ExampleMethod2_FullMethodName,
+		FullMethod: ExampleService_MetadataMatch_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExampleServiceServer).ExampleMethod2(ctx, req.(*Request))
+		return srv.(ExampleServiceServer).MetadataMatch(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ExampleService_AllowAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExampleServiceServer).AllowAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ExampleService_AllowAll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExampleServiceServer).AllowAll(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -138,12 +173,16 @@ var ExampleService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ExampleServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ExampleMethod1",
-			Handler:    _ExampleService_ExampleMethod1_Handler,
+			MethodName: "RequestMatch",
+			Handler:    _ExampleService_RequestMatch_Handler,
 		},
 		{
-			MethodName: "ExampleMethod2",
-			Handler:    _ExampleService_ExampleMethod2_Handler,
+			MethodName: "MetadataMatch",
+			Handler:    _ExampleService_MetadataMatch_Handler,
+		},
+		{
+			MethodName: "AllowAll",
+			Handler:    _ExampleService_AllowAll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

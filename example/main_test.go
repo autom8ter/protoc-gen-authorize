@@ -29,7 +29,7 @@ func Test(t *testing.T) {
 
 	{
 		// permission denied
-		if _, err := client.ExampleMethod1(context.Background(), &example.Request{
+		if _, err := client.RequestMatch(context.Background(), &example.Request{
 			AccountId: "123",
 			Message:   "hello",
 		}); err == nil {
@@ -42,16 +42,16 @@ func Test(t *testing.T) {
 	}
 	{
 		// authorized: user.AccountIds.includes(request.account_id) && user.Roles.includes('admin')
-		if _, err := client.ExampleMethod1(context.Background(), &example.Request{
+		if _, err := client.RequestMatch(context.Background(), &example.Request{
 			AccountId: testUser.AccountIds[0],
 			Message:   "hello",
 		}); err != nil {
-			t.Fatalf("failed to call ExampleMethod1: %v", err)
+			t.Fatalf("failed to call RequestMatch: %v", err)
 		}
 	}
 	{
 		// permission denied
-		if _, err := client.ExampleMethod2(context.Background(), &example.Request{
+		if _, err := client.MetadataMatch(context.Background(), &example.Request{
 			AccountId: testUser.AccountIds[0],
 			Message:   "hello",
 		}); err == nil {
@@ -66,11 +66,20 @@ func Test(t *testing.T) {
 		// authorized: user.AccountIds.includes(metadata['x-account-id']) && user.Roles.includes('admin')
 		ctx := context.Background()
 		ctx = metadata.AppendToOutgoingContext(ctx, "x-account-id", testUser.AccountIds[0])
-		if _, err := client.ExampleMethod2(ctx, &example.Request{
+		if _, err := client.MetadataMatch(ctx, &example.Request{
 			AccountId: testUser.AccountIds[0],
 			Message:   "hello",
 		}); err != nil {
-			t.Fatalf("failed to call ExampleMethod2: %v", err)
+			t.Fatalf("failed to call MetadataMatch: %v", err)
+		}
+	}
+	{
+		// authorized: true
+		if _, err := client.AllowAll(context.Background(), &example.Request{
+			AccountId: testUser.AccountIds[0],
+			Message:   "hello",
+		}); err != nil {
+			t.Fatalf("failed to call AllowAll: %v", err)
 		}
 	}
 }

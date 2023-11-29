@@ -14,31 +14,50 @@ import (
 	"github.com/autom8ter/protoc-gen-authorize/authorizer"
 )
 
-// CelAuthorizer is a javascript vm that uses javascript expressions to authorize grpc requests
+// Opt is a functional option for configuring a CelAuthorizer
+type Opt func(*CelAuthorizer)
+
+// WithMacros sets additional macros that will be available to the cel vm
+// Please note that the standard macros are already included
+func WithMacros(macros ...cel.Macro) Opt {
+	return func(c *CelAuthorizer) {
+		c.macros = append(c.macros, macros...)
+	}
+}
+
+// CelAuthorizer is a Common Expression Language vm that uses CEL expressions to authorize grpc requests
 type CelAuthorizer struct {
 	rules          map[string]*authorize.RuleSet
 	cachedPrograms sync.Map
+	macros         []cel.Macro
 }
 
 // NewCelAuthorizer returns a new CelAuthorizer. The rules map is a map of method names to RuleSets. The RuleSets are used to
 // authorize the method. The RuleSets are evaluated in order and the first rule that evaluates to true will authorize
 // the request. The mapping can be generated with the protoc-gen-authorize plugin.
-func NewCelAuthorizer(rules map[string]*authorize.RuleSet) (*CelAuthorizer, error) {
-	a := &CelAuthorizer{
+func NewCelAuthorizer(rules map[string]*authorize.RuleSet, opts ...Opt) (*CelAuthorizer, error) {
+	c := &CelAuthorizer{
 		rules:          rules,
 		cachedPrograms: sync.Map{},
 	}
-	return a, nil
+	for _, opt := range opts {
+		opt(c)
+	}
+	c.macros = append(c.macros, cel.StandardMacros...)
+	return c, nil
 }
 
 // AuthorizeMethod authorizes a gRPC method the RuleExecutionParams and returns a boolean representing whether the
 // request is authorized or not.
-func (a *CelAuthorizer) AuthorizeMethod(ctx context.Context, method string, params *authorizer.RuleExecutionParams) (bool, error) {
-	rules, ok := a.rules[method]
+func (c *CelAuthorizer) AuthorizeMethod(ctx context.Context, method string, params *authorizer.RuleExecutionParams) (bool, error) {
+	rules, ok := c.rules[method]
 	if !ok {
 		return false, nil
 	}
-	programs, err := a.getMethodPrograms(rules)
+	if len(rules.Rules) == 1 && rules.Rules[0].Expression == "*" {
+		return true, nil
+	}
+	programs, err := c.getMethodPrograms(rules)
 	if err != nil {
 		return false, err
 	}
@@ -64,6 +83,7 @@ func (a *CelAuthorizer) AuthorizeMethod(ctx context.Context, method string, para
 			string(authorizer.ExpressionVarRequest):  request,
 			string(authorizer.ExpressionVarUser):     user,
 			string(authorizer.ExpressionVarIsStream): params.IsStream,
+			string(authorizer.ExpressionVarMethod):   method,
 		})
 		if err != nil {
 			return false, fmt.Errorf("authorizer: failed to run expression: %v", err.Error())
@@ -79,17 +99,17 @@ func (a *CelAuthorizer) AuthorizeMethod(ctx context.Context, method string, para
 	return false, nil
 }
 
-func (j *CelAuthorizer) getMethodPrograms(rules *authorize.RuleSet) ([]cel.Program, error) {
+func (c *CelAuthorizer) getMethodPrograms(rules *authorize.RuleSet) ([]cel.Program, error) {
 	var programs []cel.Program
 	for _, rule := range rules.Rules {
-		program, ok := j.cachedPrograms.Load(rule.Expression)
+		program, ok := c.cachedPrograms.Load(rule.Expression)
 		if !ok {
 			vm, err := cel.NewEnv(
 				cel.Variable(string(authorizer.ExpressionVarMetadata), cel.MapType(cel.StringType, cel.StringType)),
 				cel.Variable(string(authorizer.ExpressionVarRequest), cel.MapType(cel.StringType, cel.DynType)),
 				cel.Variable(string(authorizer.ExpressionVarUser), cel.MapType(cel.StringType, cel.DynType)),
 				cel.Variable(string(authorizer.ExpressionVarIsStream), cel.BoolType),
-				cel.Macros(cel.StandardMacros...),
+				cel.Macros(c.macros...),
 			)
 			if err != nil {
 				return nil, fmt.Errorf("authorizer: failed to create cel env: %v", err.Error())
@@ -102,7 +122,7 @@ func (j *CelAuthorizer) getMethodPrograms(rules *authorize.RuleSet) ([]cel.Progr
 			if err != nil {
 				return nil, fmt.Errorf("authorizer: failed to compile expression: %v", err.Error())
 			}
-			j.cachedPrograms.Store(rule.Expression, program)
+			c.cachedPrograms.Store(rule.Expression, program)
 		}
 		programs = append(programs, program.(cel.Program))
 	}

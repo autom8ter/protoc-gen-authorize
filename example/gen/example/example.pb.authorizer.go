@@ -11,20 +11,27 @@ import (
 // the request. The mapping can be generated with the protoc-gen-authorize plugin.
 func NewAuthorizer() (*javascript.JavascriptAuthorizer, error) {
 	return javascript.NewJavascriptAuthorizer(map[string]*authorize.RuleSet{
-		ExampleService_ExampleMethod1_FullMethodName: {
+		ExampleService_AllowAll_FullMethodName: {
 			Rules: []*authorize.Rule{
 				{
-					Expression: "user.AccountIds.includes(request.AccountId) && user.Roles.includes('admin')",
+					Expression: "*",
+				},
+			},
+		},
+		ExampleService_MetadataMatch_FullMethodName: {
+			Rules: []*authorize.Rule{
+				{
+					Expression: "user.AccountIds.includes(metadata['x-account-id']) && user.Roles.includes('admin')",
 				},
 				{
 					Expression: "user.IsSuperAdmin",
 				},
 			},
 		},
-		ExampleService_ExampleMethod2_FullMethodName: {
+		ExampleService_RequestMatch_FullMethodName: {
 			Rules: []*authorize.Rule{
 				{
-					Expression: "user.AccountIds.includes(metadata['x-account-id']) && user.Roles.includes('admin')",
+					Expression: "user.AccountIds.includes(request.AccountId) && user.Roles.includes('admin')",
 				},
 				{
 					Expression: "user.IsSuperAdmin",
