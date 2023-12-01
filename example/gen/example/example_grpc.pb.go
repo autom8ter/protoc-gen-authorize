@@ -33,7 +33,7 @@ type ExampleServiceClient interface {
 	RequestMatch(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// MetadataMatch - Only super admins OR users with the admin role and access to the account id in the metadata will be allowed
 	MetadataMatch(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// AllowAll is an example of how to configure a method to allow all requests (a single rule with a wildcard expression)
+	// AllowAll is an example of how to configure a method to allow all requests
 	AllowAll(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -80,7 +80,7 @@ type ExampleServiceServer interface {
 	RequestMatch(context.Context, *Request) (*emptypb.Empty, error)
 	// MetadataMatch - Only super admins OR users with the admin role and access to the account id in the metadata will be allowed
 	MetadataMatch(context.Context, *Request) (*emptypb.Empty, error)
-	// AllowAll is an example of how to configure a method to allow all requests (a single rule with a wildcard expression)
+	// AllowAll is an example of how to configure a method to allow all requests
 	AllowAll(context.Context, *Request) (*emptypb.Empty, error)
 	mustEmbedUnimplementedExampleServiceServer()
 }

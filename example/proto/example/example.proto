@@ -52,14 +52,6 @@ service ExampleService {
       ]
     };
   }
-  // AllowAll is an example of how to configure a method to allow all requests (a single rule with a wildcard expression)
-  rpc AllowAll(Request) returns (google.protobuf.Empty){
-    option (authorize.rules) = {
-      rules: [
-        {
-          expression: "*",
-        }
-      ]
-    };
-  }
+  // AllowAll is an example of how to configure a method to allow all requests
+  rpc AllowAll(Request) returns (google.protobuf.Empty){}
 }

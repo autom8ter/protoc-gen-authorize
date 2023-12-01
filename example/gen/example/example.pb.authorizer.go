@@ -11,13 +11,6 @@ import (
 // the request. The mapping can be generated with the protoc-gen-authorize plugin.
 func NewAuthorizer(opts ...javascript.Opt) (*javascript.JavascriptAuthorizer, error) {
 	return javascript.NewJavascriptAuthorizer(map[string]*authorize.RuleSet{
-		ExampleService_AllowAll_FullMethodName: {
-			Rules: []*authorize.Rule{
-				{
-					Expression: "*",
-				},
-			},
-		},
 		ExampleService_MetadataMatch_FullMethodName: {
 			Rules: []*authorize.Rule{
 				{

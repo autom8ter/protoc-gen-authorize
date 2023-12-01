@@ -258,7 +258,7 @@ var fixtures = []fixture{
 	},
 	{
 		name:   "missing rule for method 8 (deny)",
-		method: "testing1",
+		method: "/svc/testing1",
 		params: &authorizer.RuleExecutionParams{
 			User: &User{
 				Roles:    []string{"admin"},
@@ -272,7 +272,7 @@ var fixtures = []fixture{
 			},
 		},
 		rules: map[string]*authorize.RuleSet{
-			"testing": {
+			"/svc/testing": {
 				Rules: []*authorize.Rule{
 					{
 						Expression: "user.Roles.includes('admin') && user.Accounts.includes(metadata['x-account-id'])",
@@ -280,7 +280,7 @@ var fixtures = []fixture{
 				},
 			},
 		},
-		expectAllow: false,
+		expectAllow: true,
 	},
 	{
 		name:   "allow all rule for method 9 (allow)",

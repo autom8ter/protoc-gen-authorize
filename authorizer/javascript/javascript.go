@@ -53,6 +53,12 @@ func (a *JavascriptAuthorizer) AuthorizeMethod(ctx context.Context, method strin
 	// return false if no rules exist for the method
 	rules, ok := a.rules[method]
 	if !ok {
+		svc := strings.Split(method, "/")[1]
+		for k, _ := range a.rules {
+			if strings.HasPrefix(k, "/"+svc) {
+				return true, nil
+			}
+		}
 		return false, nil
 	}
 	// allow all

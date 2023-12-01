@@ -52,6 +52,13 @@ func NewCelAuthorizer(rules map[string]*authorize.RuleSet, opts ...Opt) (*CelAut
 func (c *CelAuthorizer) AuthorizeMethod(ctx context.Context, method string, params *authorizer.RuleExecutionParams) (bool, error) {
 	rules, ok := c.rules[method]
 	if !ok {
+		svc := strings.Split(method, "/")[1]
+		fmt.Println(svc)
+		for k, _ := range c.rules {
+			if strings.HasPrefix(k, "/"+svc) {
+				return true, nil
+			}
+		}
 		return false, nil
 	}
 	if len(rules.Rules) == 1 && rules.Rules[0].Expression == "*" {
