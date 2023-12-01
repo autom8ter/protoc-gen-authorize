@@ -54,6 +54,14 @@ func DefaultUserExtractor(ctx context.Context) (any, error) {
 	return user, nil
 }
 
+// AuthorizeMethodFunc is a function that authorizes a grpc request
+type AuthorizeMethodFunc func(ctx context.Context, method string, params *RuleExecutionParams) (allow bool, err error)
+
+// AuthorizeMethod implements the Authorizer interface
+func (f AuthorizeMethodFunc) AuthorizeMethod(ctx context.Context, method string, params *RuleExecutionParams) (allow bool, err error) {
+	return f(ctx, method, params)
+}
+
 // Authorizer is an interface for authorizing grpc requests
 type Authorizer interface {
 	// AuthorizeMethod is called by the grpc interceptor to authorize a request
@@ -86,7 +94,7 @@ func WithWhiteListMethods(methods []string) Opt {
 
 // UnaryServerInterceptor uses the given authorizer to authorize unary grpc requests.
 // JavascriptAuthorizer/CELAuthorizer are implementations of Authorizer that use javascript/CEL expressions to authorize requests
-func UnaryServerInterceptor(authorizer []Authorizer, opts ...Opt) grpc.UnaryServerInterceptor {
+func UnaryServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.UnaryServerInterceptor {
 	o := &options{}
 	for _, opt := range opts {
 		opt(o)
@@ -108,18 +116,16 @@ func UnaryServerInterceptor(authorizer []Authorizer, opts ...Opt) grpc.UnaryServ
 			}
 		}
 		md, _ := metadata.FromIncomingContext(ctx)
-		for _, a := range authorizer {
-			authorized, err := a.AuthorizeMethod(ctx, info.FullMethod, &RuleExecutionParams{
-				User:     usr,
-				Request:  req,
-				Metadata: md,
-			})
-			if err != nil {
-				return nil, err
-			}
-			if authorized {
-				return handler(ctx, req)
-			}
+		authorized, err := authorizer.AuthorizeMethod(ctx, info.FullMethod, &RuleExecutionParams{
+			User:     usr,
+			Request:  req,
+			Metadata: md,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if authorized {
+			return handler(ctx, req)
 		}
 
 		return nil, status.Errorf(codes.PermissionDenied, "authorizer: permission denied")
@@ -129,7 +135,7 @@ func UnaryServerInterceptor(authorizer []Authorizer, opts ...Opt) grpc.UnaryServ
 // StreamServerInterceptor uses the given authorizer to authorize streaming grpc requests.
 // JavascriptAuthorizer/CELAuthorizer are implementations of Authorizer that use javascript/CEL expressions to authorize requests
 // the request object in the expression evaluation is nil because it is not available in the context for streaming requests
-func StreamServerInterceptor(authorizer []Authorizer, opts ...Opt) grpc.StreamServerInterceptor {
+func StreamServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.StreamServerInterceptor {
 	o := &options{}
 	for _, opt := range opts {
 		opt(o)
@@ -151,19 +157,33 @@ func StreamServerInterceptor(authorizer []Authorizer, opts ...Opt) grpc.StreamSe
 			}
 		}
 		md, _ := metadata.FromIncomingContext(ss.Context())
-		for _, a := range authorizer {
-			authorized, err := a.AuthorizeMethod(ss.Context(), info.FullMethod, &RuleExecutionParams{
-				User:     usr,
-				Metadata: md,
-				IsStream: true,
-			})
-			if err != nil {
-				return err
-			}
-			if authorized {
-				return handler(srv, ss)
-			}
+		authorized, err := authorizer.AuthorizeMethod(ss.Context(), info.FullMethod, &RuleExecutionParams{
+			User:     usr,
+			Metadata: md,
+			IsStream: true,
+		})
+		if err != nil {
+			return err
+		}
+		if authorized {
+			return handler(srv, ss)
 		}
 		return status.Errorf(codes.PermissionDenied, "authorizer: permission denied")
 	}
+}
+
+// Chain chains multiple authorizers together - if any authorizer returns true, the request is authorized
+func Chain(authz ...Authorizer) Authorizer {
+	return AuthorizeMethodFunc(func(ctx context.Context, method string, params *RuleExecutionParams) (bool, error) {
+		for _, a := range authz {
+			allow, err := a.AuthorizeMethod(ctx, method, params)
+			if err != nil {
+				return false, err
+			}
+			if allow {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
 }

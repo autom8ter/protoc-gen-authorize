@@ -9,6 +9,7 @@ require (
 	github.com/lyft/protoc-gen-star v0.6.2
 	github.com/mitchellh/mapstructure v1.5.0
 	google.golang.org/grpc v1.59.0
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
@@ -27,5 +28,4 @@ require (
 	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
 )

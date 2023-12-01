@@ -113,28 +113,6 @@ service ExampleService {
 }
 ```
 
-make sure to import "github.com/autom8ter/protoc-gen-authorize/authorizer" in your server code and use the authorizer
-interceptors:
-
-```go
-    // create a new authorizer from the generated function(protoc-gen-authorize)
-authz, err := example.NewAuthorizer()
-if err != nil {
-return err
-}
-// create a new grpc server with the authorizer interceptors
-srv := grpc.NewServer(
-grpc.UnaryInterceptor(
-authorizer.UnaryServerInterceptor([]authorizer.Authorizer{authz}, authorizer.WithUserExtractor(userExtractor)),
-),
-grpc.StreamInterceptor(
-authorizer.StreamServerInterceptor([]authorizer.Authorizer{authz}, authorizer.WithUserExtractor(userExtractor)),
-),
-)
-// register the example service
-example.RegisterExampleServiceServer(srv, server.NewExampleServer())
-```
-
 ## Performance
 
 The javascript authorizer for the plugin uses goja, a JavaScript interpreter written in Go.
