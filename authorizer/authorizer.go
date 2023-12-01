@@ -3,6 +3,8 @@ package authorizer
 import (
 	"context"
 
+	`github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors`
+	`github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector`
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -71,6 +73,7 @@ type Authorizer interface {
 type options struct {
 	userExtractor    UserExtractor
 	whiteListMethods []string
+	selectors        []selector.Matcher
 }
 
 // Opt is an option for configuring the interceptor
@@ -92,6 +95,13 @@ func WithWhiteListMethods(methods []string) Opt {
 	}
 }
 
+// WithSelectors sets the list of selectors that will be used to determine if the interceptor should be applied to a request
+func WithSelectors(selectors ...selector.Matcher) Opt {
+	return func(o *options) {
+		o.selectors = append(o.selectors, selectors...)
+	}
+}
+
 // UnaryServerInterceptor uses the given authorizer to authorize unary grpc requests.
 // JavascriptAuthorizer/CELAuthorizer are implementations of Authorizer that use javascript/CEL expressions to authorize requests
 func UnaryServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.UnaryServerInterceptor {
@@ -99,7 +109,23 @@ func UnaryServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.UnaryServer
 	for _, opt := range opts {
 		opt(o)
 	}
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		if len(o.selectors) > 0 {
+			meta := interceptors.NewServerCallMeta(info.FullMethod, nil, req)
+			for _, s := range o.selectors {
+				if s.Match(ctx, meta) {
+					return unaryServerInterceptor(authorizer, o)(ctx, req, info, handler)
+				}
+			}
+			return handler(ctx, req)
+		}
+		return unaryServerInterceptor(authorizer, o)(ctx, req, info, handler)
+	}
+}
+
+func unaryServerInterceptor(authorizer Authorizer, o *options) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+
 		for _, m := range o.whiteListMethods {
 			if m == info.FullMethod {
 				return handler(ctx, req)
@@ -140,6 +166,21 @@ func StreamServerInterceptor(authorizer Authorizer, opts ...Opt) grpc.StreamServ
 	for _, opt := range opts {
 		opt(o)
 	}
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		if len(o.selectors) > 0 {
+			meta := interceptors.NewServerCallMeta(info.FullMethod, info, nil)
+			for _, s := range o.selectors {
+				if s.Match(ss.Context(), meta) {
+					return streamServerInterceptor(authorizer, o)(srv, ss, info, handler)
+				}
+			}
+			return handler(srv, ss)
+		}
+		return streamServerInterceptor(authorizer, o)(srv, ss, info, handler)
+	}
+}
+
+func streamServerInterceptor(authorizer Authorizer, o *options) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		for _, m := range o.whiteListMethods {
 			if m == info.FullMethod {

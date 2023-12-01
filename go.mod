@@ -6,6 +6,7 @@ require (
 	github.com/autom8ter/proto v0.0.0
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d
 	github.com/google/cel-go v0.18.2
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/lyft/protoc-gen-star v0.6.2
 	github.com/mitchellh/mapstructure v1.5.0
 	google.golang.org/grpc v1.59.0
@@ -19,8 +20,8 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/spf13/afero v1.3.3 // indirect
-	github.com/stoewer/go-strcase v1.2.0 // indirect
-	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
